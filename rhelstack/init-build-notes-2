@@ -1,0 +1,174 @@
+###
+full recipe
+######
+ec2-user history
+sudo su
+
+podman run --security-opt=no-new-privileges --cap-drop=ALL --security-opt label=type:nvidia_container_t --hooks-dir=/usr/share/containers/oci/hooks.d/ --device=nvidia.com/gpu=all docker.io/nvidia/cuda:12.2.0-base-ubi8 nvidia-smi
+
+su history
+subscription-manager register
+
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+sudo dnf clean all
+yum update -y
+modprobe -r nouveau
+yum -y install podman
+yum -y install kernel-devel-`uname -r` kernel-headers-`uname -r`
+yum -y install dkms
+yum -y module install nvidia-driver:latest-dkms
+yum -y install cuda
+yum install -y nvidia-container-toolkit
+nvidia-smi --query-gpu=gpu_name --format=csv,noheader --id=0 | sed -e 's/ /-/g'
+
+curl -O -L https://raw.githubusercontent.com/NVIDIA/dgx-selinux/master/bin/RHEL8/nvidia-container.pp
+semodule -i nvidia-container.pp
+
+nvidia-container-cli -k list | restorecon -v -f -
+restorecon -Rv /dev
+nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+
+##########
+
+
+1. register w/RH
+subscription-manager register
+2. install & update
+yum -y update 
+yum -y install podman
+yum -y install kernel-devel-`uname -r` kernel-headers-`uname -r`
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+yum -y install dkms
+#yum -y install http://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-repo-rhel8-10.2.89-1.x86_64.rpm
+
+either:
+modprobe -r nouveau
+yum -y install cuda
+( kernel command line will add this during cuda install - kernel command line (nouveau.modeset=0 rd.driver.blacklist=nouveau video=vesa:off) )
+or:
+yum -y install xorg-x11-drv-nvidia xorg-x11-drv-nvidia-devel kmod-nvidia-latest-dkms
+
+
+#above didn't work
+sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+sudo dnf clean all
+sudo dnf -y module install nvidia-driver:latest-dkms
+sudo dnf -y install cuda
+
+   41  dnf config-manager --disable cuda
+   42  dnf config-manager --enable cuda-rhel8-x86_64
+   43  sudo dnf -y module install nvidia-driver:latest-dkms
+
+this one worked:
+cat /etc/yum.repos.d/cuda-rhel8.repo
+[cuda-rhel8-x86_64]
+name=cuda-rhel8-x86_64
+baseurl=https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64
+enabled=1
+gpgcheck=1
+gpgkey=https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/D42D0685.pub
+
+
+yum -y install podman
+yum -y install kernel-devel-`uname -r` kernel-headers-`uname -r`
+yum -y install dkms
+yum -y module install nvidia-driver:latest-dkms
+yum -y install cuda
+
+verify it worked:
+nvidia-smi --query-gpu=gpu_name --format=csv,noheader --id=0 | sed -e 's/ /-/g'
+
+The next step is to install libnvidia-container and the nvidia-container-runtime repositories
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+# this failed
+curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.repo | tee /etc/yum.repos.d/nvidia-docker.repo
+
+
+
+https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#linux-distributions
+
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | \
+  sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+
+yum -y install wget
+
+wget https://raw.githubusercontent.com/NVIDIA/dgx-selinux/master/bin/RHEL8/nvidia-container.pp
+curl -O -L https://raw.githubusercontent.com/NVIDIA/dgx-selinux/master/bin/RHEL8/nvidia-container.pp
+
+sudo yum install -y nvidia-container-toolkit
+
+semodule -i nvidia-container.pp
+
+nvidia-container-cli -k list | restorecon -v -f -
+restorecon -Rv /dev
+
+# NOW NEEDS a data repository, this hack works
+
+sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+
+exit back to user
+podman run --security-opt=no-new-privileges --cap-drop=ALL --security-opt label=type:nvidia_container_t --hooks-dir=/usr/share/containers/oci/hooks.d/ --device=nvidia.com/gpu=all docker.io/nvidia/cuda:12.2.0-base-ubi8 nvidia-smi
+
+
+######
+ec2-user history
+sudo su
+
+podman run --security-opt=no-new-privileges --cap-drop=ALL --security-opt label=type:nvidia_container_t --hooks-dir=/usr/share/containers/oci/hooks.d/ --device=nvidia.com/gpu=all docker.io/nvidia/cuda:12.2.0-base-ubi8 nvidia-smi
+
+su history
+subscription-manager register
+
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+sudo dnf clean all
+yum update -y
+modprobe -r nouveau
+yum -y install podman
+yum -y install kernel-devel-`uname -r` kernel-headers-`uname -r`
+yum -y install dkms
+yum -y module install nvidia-driver:latest-dkms
+yum -y install cuda
+yum install -y nvidia-container-toolkit
+nvidia-smi --query-gpu=gpu_name --format=csv,noheader --id=0 | sed -e 's/ /-/g'
+
+curl -O -L https://raw.githubusercontent.com/NVIDIA/dgx-selinux/master/bin/RHEL8/nvidia-container.pp
+semodule -i nvidia-container.pp
+
+nvidia-container-cli -k list | restorecon -v -f -
+restorecon -Rv /dev
+nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+
+##########
+
+mkdir data
+podman run --rm --net=host -v $(pwd):/workspace:Z -v $(pwd)/data:/data:Z \
+--security-opt=no-new-privileges \
+--cap-drop=ALL --security-opt label=type:nvidia_container_t \
+docker.io/pytorch/pytorch:latest \
+python3 main.py --epochs=3
+
+
+
+rootless:
+ /etc/nvidia-container-runtime/config.toml
+
+add the 2 uncommented lines:
+[nvidia-container-cli]
+#no-cgroups = false
+no-cgroups = true
+
+[nvidia-container-runtime]
+#debug = "/var/log/nvidia-container-runtime.log"
+debug = "~/.local/nvidia-container-runtime.log"
+
+podman run --security-opt=no-new-privileges --cap-drop=ALL --security-opt \
+label=type:nvidia_container_t --hooks-dir=/usr/share/containers/oci/hooks.d/ \
+docker.io/nvidia/cuda:10.2-base nvidia-smi
+
+podman run --security-opt=no-new-privileges --cap-drop=ALL --security-opt label=type:nvidia_container_t --hooks-dir=/usr/share/containers/oci/hooks.d/ docker.io/nvidia/cuda:12.2.0-devel-ubi8 nvidia-smi
+
+
+this is important for CDI:
+sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
